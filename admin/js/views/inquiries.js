@@ -86,6 +86,11 @@ function openDetail(s, el) {
           <select id="tpl">${state.templates.map((t) => html`<option value="${t.id}">${t.name}</option>`)}</select>
           <button class="primary" id="reply">Open in Gmail ↗</button>
         </div>
+        <div class="row alt">
+          <button class="ghost small-btn" id="copy-mail">Copy subject + text</button>
+          <button class="ghost small-btn" id="copy-addr">Copy email address</button>
+          <a class="ghost small-btn linkbtn" id="mailto" href="#">Open in mail app</a>
+        </div>
         <label class="check"><input type="checkbox" id="mark" checked> Mark as replied</label>
         <p class="muted small">Opens a pre-filled Gmail draft. You can edit it before sending. Edit templates under “Email templates”.</p>
       </div>
@@ -101,6 +106,21 @@ function openDetail(s, el) {
       await patch(s, { status: $("#status", modal).value, notes: $("#notes", modal).value.trim() || null }, el);
       toast("Saved"); closeModal();
     } catch (e) { toast(e.message, "error"); }
+  });
+
+  const current = () => {
+    const t = state.templates.find((x) => x.id === $("#tpl", modal).value);
+    return t ? { subject: fillTemplate(t.subject, s), body: fillTemplate(t.body, s) } : null;
+  };
+  const copy = async (text, msg) => {
+    try { await navigator.clipboard.writeText(text); toast(msg); } catch { toast("Could not copy. Select the text manually.", "error"); }
+  };
+  $("#copy-mail", modal).addEventListener("click", () => { const m = current(); if (m) copy(`Subject: ${m.subject}\n\n${m.body}`, "Copied. Paste it into any email."); });
+  $("#copy-addr", modal).addEventListener("click", () => copy(s.email, "Email address copied"));
+  $("#mailto", modal).addEventListener("click", (e) => {
+    const m = current();
+    if (!m) return e.preventDefault();
+    e.currentTarget.href = `mailto:${s.email}?subject=${encodeURIComponent(m.subject)}&body=${encodeURIComponent(m.body)}`;
   });
 
   $("#reply", modal).addEventListener("click", async () => {
